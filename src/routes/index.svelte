@@ -12,6 +12,7 @@
 </script>
 
 <script>
+	import { session } from '$app/stores';
 	export let user;
 </script>
 
@@ -19,6 +20,8 @@
 
 {#if user}
 	<h1>Hello {user.username}!</h1>
+
+	<p>Your session data : {JSON.stringify($session)}</p>
 
 	<a href="/logout">Log Out</a>
 {:else}

@@ -26,7 +26,6 @@ export async function get({ url }) {
 
 	// redirect to front page in case of error
 	if (response.error) {
-		alert(response.error);
 		console.log('redirect to / due error');
 		return {
 			headers: { Location: '/' },

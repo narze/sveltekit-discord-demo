@@ -3,34 +3,49 @@ const DISCORD_API_URL = 'https://discord.com/api';
 const HOST = import.meta.env.VITE_HOST;
 
 export async function getSession(event) {
+	if (event.locals.user) {
+		return { user: event.locals.user };
+	}
+
+	return {};
+}
+
+export async function handle({ event, resolve }) {
 	const cookies = cookie.parse(event.request.headers.get('cookie') || '');
+	const cookies_to_set = [];
 
 	// if only refresh token is found, then access token has expired. perform a refresh on it.
 	if (cookies.refresh_token && !cookies.access_token) {
-		const discord_request = await fetch(
+		const refresh_token_response = await fetch(
 			`${HOST}/auth/refresh?refresh_token=${cookies.refresh_token}`
 		);
-		const discord_response = await discord_request.json();
+		const discord_response_data = await refresh_token_response.json();
 
-		if (discord_response.access_token) {
-			console.log('setting discord user via refresh token..');
-			const request = await fetch(`${DISCORD_API_URL}/users/@me`, {
-				headers: { Authorization: `Bearer ${discord_response.access_token}` }
-			});
+		if (refresh_token_response.ok) {
+			cookies.access_token = discord_response_data.access_token;
 
-			// returns a discord user if JWT was valid
-			const response = await request.json();
+			const access_token_expires_in = new Date(Date.now() + discord_response_data.expires_in); // 10 minutes
+			const refresh_token_expires_in = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days,
 
-			if (response.id) {
-				return {
-					user: {
-						// only include properties needed client-side —
-						// exclude anything else attached to the user
-						// like access tokens etc
-						...response
-					}
-				};
-			}
+			cookies_to_set.push(
+				cookie.serialize('access_token', discord_response_data.access_token, {
+					path: '/',
+					httpOnly: true,
+					sameSite: 'strict',
+					secure: process.env.NODE_ENV === 'production',
+					expires: access_token_expires_in
+				})
+			);
+
+			cookies_to_set.push(
+				cookie.serialize('refresh_token', discord_response_data.refresh_token, {
+					path: '/',
+					httpOnly: true,
+					sameSite: 'strict',
+					secure: process.env.NODE_ENV === 'production',
+					expires: refresh_token_expires_in
+				})
+			);
 		}
 	}
 
@@ -40,23 +55,17 @@ export async function getSession(event) {
 			headers: { Authorization: `Bearer ${cookies.access_token}` }
 		});
 
-		// returns a discord user if JWT was valid
 		const response = await request.json();
 
 		if (response.id) {
-			return {
-				user: {
-					// only include properties needed client-side —
-					// exclude anything else attached to the user
-					// like access tokens etc
-					...response
-				}
-			};
+			event.locals.user = { ...response };
 		}
 	}
 
-	// not authenticated, return empty user object
-	return {
-		user: false
-	};
+	const originalResponse = await resolve(event);
+
+	// Put the cookies in the original response
+	cookies_to_set.forEach((cookie) => originalResponse.headers.append('set-cookie', cookie));
+
+	return originalResponse;
 }
