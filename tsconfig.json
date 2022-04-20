@@ -1,0 +1,7 @@
+{
+	"compilerOptions": {
+		"module": "es2020",
+		"moduleResolution": "node"
+	},
+	"extends": "./.svelte-kit/tsconfig.json"
+}
