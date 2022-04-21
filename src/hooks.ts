@@ -1,3 +1,4 @@
+import type { Handle } from '@sveltejs/kit';
 import cookie from 'cookie';
 const DISCORD_API_URL = 'https://discord.com/api';
 const HOST = import.meta.env.VITE_HOST;
@@ -12,6 +13,8 @@ export async function getSession(event) {
 
 export async function handle({ event, resolve }) {
 	const cookies = cookie.parse(event.request.headers.get('cookie') || '');
+
+	console.log('DEBUG: request', { ...event.request });
 	const cookies_to_set = [];
 
 	// if only refresh token is found, then access token has expired. perform a refresh on it.
