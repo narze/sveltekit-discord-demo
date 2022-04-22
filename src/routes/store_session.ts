@@ -3,8 +3,7 @@ import type { RequestHandler } from '@sveltejs/kit';
 
 export const post: RequestHandler = async ({ request }) => {
 	const params = await request.json();
-	console.log({ params });
-	// redirect user to front page with cookies set
+
 	return {
 		headers: {
 			'Set-Cookie': [

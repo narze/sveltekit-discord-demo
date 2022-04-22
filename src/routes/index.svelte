@@ -8,9 +8,8 @@
 	const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${DISCORD_OAUTH_REDIRECT_URI}&response_type=code&scope=identify%20connections`;
 
 	export const load: Load = async ({ session, fetch }) => {
+		// Receives refreshed tokens from session & store it to httpOnly cookie
 		if (session['tokens'] && browser) {
-			console.log('token refreshed, store tokens in httpOnly cookies');
-
 			await fetch('/store_session', {
 				method: 'POST',
 				body: JSON.stringify(session['tokens'])
