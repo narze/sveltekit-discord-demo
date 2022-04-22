@@ -1,19 +1,33 @@
-<script context="module">
+<script context="module" lang="ts">
+	import { browser } from '$app/env';
+	import type { Load } from '@sveltejs/kit';
+
 	const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID;
 	const DISCORD_OAUTH_REDIRECT_URI = import.meta.env.VITE_DISCORD_OAUTH_REDIRECT_URI;
 
-	export async function load({ session }) {
-		return {
-			props: { user: session.user || false }
-		};
-	}
-
 	const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${DISCORD_OAUTH_REDIRECT_URI}&response_type=code&scope=identify%20connections`;
+
+	export const load: Load = async ({ session, fetch }) => {
+		if (session['tokens'] && browser) {
+			console.log('token refreshed, store tokens in httpOnly cookies');
+
+			await fetch('/store_session', {
+				method: 'POST',
+				body: JSON.stringify(session['tokens'])
+			});
+		}
+
+		return {
+			props: { user: session['user'] || false }
+		};
+	};
 </script>
 
-<script>
+<script lang="ts">
 	import { session } from '$app/stores';
 	export let user;
+
+	console.log({ user });
 </script>
 
 <h1>SvelteKit Discord Demo</h1>
