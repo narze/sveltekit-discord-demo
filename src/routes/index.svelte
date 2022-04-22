@@ -27,7 +27,38 @@
 	import { session } from '$app/stores';
 	export let user;
 
-	console.log({ user });
+	let fetchTokensPromise = Promise.resolve([]);
+
+	$: if (user) {
+		refetchTokens();
+	}
+
+	function refetchTokens() {
+		fetchTokensPromise = fetchTokens();
+	}
+
+	async function fetchTokens() {
+		const res = await fetch('/debug/tokens.json');
+		const data = await res.json();
+
+		if (res.ok) {
+			return data;
+		} else {
+			throw new Error('Error fetching tokens');
+		}
+	}
+
+	async function clearAccessToken() {
+		await fetch('/debug/clear_access_token', { method: 'POST' });
+
+		refetchTokens();
+	}
+
+	async function clearRefreshToken() {
+		await fetch('/debug/clear_refresh_token', { method: 'POST' });
+
+		refetchTokens();
+	}
 </script>
 
 <h1>SvelteKit Discord Demo</h1>
@@ -35,9 +66,27 @@
 {#if user}
 	<h1>Hello {user.username}!</h1>
 
-	<p>Your session data : {JSON.stringify($session)}</p>
+	<h3>Session Data</h3>
 
-	<a href="/logout">Log Out</a>
+	<pre>{JSON.stringify($session['user'], null, 2)}</pre>
+
+	<h3>Tokens</h3>
+
+	{#await fetchTokensPromise}
+		...
+	{:then tokens}
+		<pre>{JSON.stringify(tokens, null, 2)}</pre>
+
+		<button on:click={clearAccessToken}>Clear Access Token</button>
+		<button on:click={clearRefreshToken}>Clear Refresh Token</button>
+		<button
+			on:click={() => {
+				window.location.reload();
+			}}>Reload page</button
+		>
+	{/await}
+
+	<p><a href="/logout">Log Out</a></p>
 {:else}
 	<a href={authUrl}>Login with Discord</a>
 {/if}
